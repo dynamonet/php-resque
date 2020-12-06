@@ -9,7 +9,7 @@
 class Resque_Tests_JobStatusTest extends Resque_Tests_TestCase
 {
 	/**
-	 * @var \Resque_Worker
+	 * @var \Worker
 	 */
 	protected $worker;
 
@@ -18,8 +18,8 @@ class Resque_Tests_JobStatusTest extends Resque_Tests_TestCase
 		parent::setUp();
 
 		// Register a worker to test with
-		$this->worker = new Resque_Worker('jobs');
-		$this->worker->setLogger(new Resque_Log());
+		$this->worker = new Worker('jobs');
+		$this->worker->setLogger(new ConsoleLogger());
 	}
 
 	public function testJobStatusCanBeTracked()

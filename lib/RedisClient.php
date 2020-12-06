@@ -1,4 +1,11 @@
 <?php
+
+namespace Dynamo\Resque;
+
+use Throwable;
+use Redis;
+use RedisCluster;
+
 /**
  * Wrap Credis to add namespace support and various helper methods.
  *
@@ -6,13 +13,24 @@
  * @author		Chris Boulton <chris@bigcommerce.com>
  * @license		http://www.opensource.org/licenses/mit-license.php
  */
-class Resque_Redis
+class RedisClient
 {
 	/**
 	 * Redis namespace
 	 * @var string
 	 */
 	private static $defaultNamespace = 'resque:';
+
+	private $host;
+	private $port;
+	private $database;
+
+	/**
+	 * Native Redis driver (https://github.com/phpredis/phpredis)
+	 *
+	 * @var Redis|RedisCluster
+	 */
+	private $driver = null;
 
 	/**
 	 * A default host to connect to
@@ -110,46 +128,49 @@ class Resque_Redis
 	 *                      DSN-supplied value will be used instead and this parameter is ignored.
 	 * @param object $client Optional Credis_Cluster or Credis_Client instance instantiated by you
 	 */
-    public function __construct($server, $database = null, $client = null)
+    public function __construct(
+		$host,
+		int $port = 6379,
+		int $database = 0
+	)
 	{
+		$this->host = $host;
+		$this->port = $port;
+		$this->database = $database;
+
 		try {
-			if (is_object($client)) {
-				$this->driver = $client;
-			}
-			elseif (is_object($server)) {
-				$this->driver = $server;
-			}
-			elseif (is_array($server)) {
-				$this->driver = new Credis_Cluster($server);
-			}
-			else {
-				list($host, $port, $dsnDatabase, $user, $password, $options) = self::parseDsn($server);
+			if (is_array($host)) {
+				$this->driver = new RedisCluster(NULL, $host);
+			}else {
+				//list($host, $port, $dsnDatabase, $user, $password, $options) = self::parseDsn($server);
 				// $user is not used, only $password
 
 				// Look for known Credis_Client options
-				$timeout = isset($options['timeout']) ? intval($options['timeout']) : null;
-				$persistent = isset($options['persistent']) ? $options['persistent'] : '';
-				$maxRetries = isset($options['max_connect_retries']) ? $options['max_connect_retries'] : 0;
+				//$timeout = isset($options['timeout']) ? intval($options['timeout']) : null;
+				//$persistent = isset($options['persistent']) ? $options['persistent'] : '';
+				//$maxRetries = isset($options['max_connect_retries']) ? $options['max_connect_retries'] : 0;
 
-				$this->driver = new Credis_Client($host, $port, $timeout, $persistent);
-				$this->driver->setMaxConnectRetries($maxRetries);
-				if ($password){
-					$this->driver->auth($password);
-				}
+				$this->driver = new Redis();
+				
+				//($host, $port, $timeout, $persistent);
+				//$this->driver->setMaxConnectRetries($maxRetries);
+				//if ($password){
+				//	$this->driver->auth($password);
+				//}
 
 				// If we have found a database in our DSN, use it instead of the `$database`
 				// value passed into the constructor.
-				if ($dsnDatabase !== false) {
-					$database = $dsnDatabase;
-				}
+				//if ($dsnDatabase !== false) {
+				//	$database = $dsnDatabase;
+				//}
 			}
 
-			if ($database !== null) {
-				$this->driver->select($database);
-			}
+			//if ($database !== null) {
+			//	$this->driver->select($database);
+			//}
 		}
-		catch(CredisException $e) {
-			throw new Resque_RedisException('Error communicating with Redis: ' . $e->getMessage(), 0, $e);
+		catch(Throwable $e) {
+			throw new ResqueException('Error communicating with Redis: ' . $e->getMessage(), 0, $e);
 		}
 	}
 
@@ -242,6 +263,16 @@ class Resque_Redis
 	}
 
 	/**
+	 * Undocumented function
+	 *
+	 * @return \Dynamo\Resque\Redis\PipelineInterface
+	 */
+	public function pipeline()
+	{
+		return $this->driver->multi(Redis::PIPELINE);
+	}
+
+	/**
 	 * Magic method to handle all function requests and prefix key based
 	 * operations with the {self::$defaultNamespace} key prefix.
 	 *
@@ -262,10 +293,16 @@ class Resque_Redis
 			}
 		}
 		try {
-			return $this->driver->__call($name, $args);
-		}
-		catch (CredisException $e) {
-			throw new Resque_RedisException('Error communicating with Redis: ' . $e->getMessage(), 0, $e);
+			if(!$this->driver->isConnected()){
+				$this->driver->connect($this->host, $this->port);
+				if ($this->database != null) {
+					$this->driver->select($this->database);
+				}
+			}
+			
+			return $this->driver->$name(...$args);
+		} catch (Throwable $e) {
+			throw new ResqueException('Error communicating with Redis: ' . $e->getMessage(), 0, $e);
 		}
 	}
 

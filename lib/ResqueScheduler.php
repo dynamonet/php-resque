@@ -46,7 +46,7 @@ class ResqueScheduler
 		$job = self::jobToHash($queue, $class, $args);
 		self::delayedPush($at, $job);
 		
-		Resque_Event::trigger('afterSchedule', array(
+		Event::trigger('afterSchedule', array(
 			'at'    => $at,
 			'queue' => $queue,
 			'class' => $class,
@@ -255,15 +255,15 @@ class ResqueScheduler
 	 *
 	 * @param string $class Name of job class.
 	 * @param string $queue Name of queue.
-	 * @throws Resque_Exception
+	 * @throws ResqueException
 	 */
 	private static function validateJob($class, $queue)
 	{
 		if (empty($class)) {
-			throw new Resque_Exception('Jobs must be given a class.');
+			throw new ResqueException('Jobs must be given a class.');
 		}
 		else if (empty($queue)) {
-			throw new Resque_Exception('Jobs must be put in a queue.');
+			throw new ResqueException('Jobs must be put in a queue.');
 		}
 		
 		return true;

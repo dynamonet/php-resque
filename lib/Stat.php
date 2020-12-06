@@ -1,4 +1,6 @@
 <?php
+
+namespace Dynamo\Resque;
 /**
  * Resque statistic management (jobs processed, failed, etc)
  *
@@ -6,7 +8,7 @@
  * @author		Chris Boulton <chris@bigcommerce.com>
  * @license		http://www.opensource.org/licenses/mit-license.php
  */
-class Resque_Stat
+class Stat
 {
 	/**
 	 * Get the value of the supplied statistic counter for the specified statistic.
@@ -16,7 +18,7 @@ class Resque_Stat
 	 */
 	public static function get($stat)
 	{
-		return (int)Resque::redis()->get('stat:' . $stat);
+		return (int) Resque::redis()->get('stat:' . $stat);
 	}
 
 	/**
@@ -28,7 +30,7 @@ class Resque_Stat
 	 */
 	public static function incr($stat, $by = 1)
 	{
-		return (bool)Resque::redis()->incrby('stat:' . $stat, $by);
+		return (bool) Resque::redis()->hincrby('stats', $stat, $by);
 	}
 
 	/**
@@ -40,7 +42,7 @@ class Resque_Stat
 	 */
 	public static function decr($stat, $by = 1)
 	{
-		return (bool)Resque::redis()->decrby('stat:' . $stat, $by);
+		return (bool) Resque::redis()->hincrby('stats', $stat, -$by);
 	}
 
 	/**
@@ -51,6 +53,6 @@ class Resque_Stat
 	 */
 	public static function clear($stat)
 	{
-		return (bool)Resque::redis()->del('stat:' . $stat);
+		return (bool)Resque::redis()->hset('stats', $stat, 0);
 	}
 }

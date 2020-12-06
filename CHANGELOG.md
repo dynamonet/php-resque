@@ -46,7 +46,7 @@ environment variable to connect:
     Redisent (danhunsaker)
 -   Fix an issue where a lost connection to Redis could cause an infinite loop
     (atorres757)
--   Add a helper method to `Resque_Redis` to remove the namespace applied to
+-   Add a helper method to `Redis` to remove the namespace applied to
     Redis keys (tonypiper)
 -   Call beforePerform hook before retrieivng an instance of the job class
     (allows beforePerform to cancel a job with DontPerform before initialising
@@ -82,7 +82,7 @@ Redisent to Credis), and will drop compatibility with PHP 5.2.
     (pedroarnal)
 -   Fix typographical errors in PHP docblocks (chaitanyakuber)
 -   Set the queue name on job instances when jobs are executed (chaitanyakuber)
--   Fix and add tests for Resque_Event::stopListening (ebernhardson)
+-   Fix and add tests for Event::stopListening (ebernhardson)
 -   Documentation cleanup (maetl)
 -   Pass queue name to afterEvent callback
 -   Only declare RedisException if it doesn't already exist (Matt Heath)

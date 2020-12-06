@@ -1,4 +1,10 @@
 <?php
+
+namespace Dynamo\Resque;
+
+use Psr\Log\AbstractLogger;
+use Psr\Log\LogLevel;
+
 /**
  * Resque default logger PSR-3 compliant
  *
@@ -6,7 +12,7 @@
  * @author		Chris Boulton <chris@bigcommerce.com>
  * @license		http://www.opensource.org/licenses/mit-license.php
  */
-class Resque_Log extends Psr\Log\AbstractLogger 
+class ConsoleLogger extends AbstractLogger 
 {
 	public $verbose;
 
@@ -32,7 +38,7 @@ class Resque_Log extends Psr\Log\AbstractLogger
 			return;
 		}
 
-		if (!($level === Psr\Log\LogLevel::INFO || $level === Psr\Log\LogLevel::DEBUG)) {
+		if (!($level === LogLevel::INFO || $level === LogLevel::DEBUG)) {
 			fwrite(
 				STDOUT,
 				'[' . $level . '] ' . $this->interpolate($message, $context) . PHP_EOL

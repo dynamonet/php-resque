@@ -1,4 +1,9 @@
 <?php
+
+namespace Dynamo\Resque;
+
+use RuntimeException;
+
 /**
  * Base Resque class.
  *
@@ -13,15 +18,22 @@ class Resque
     const DEFAULT_INTERVAL = 5;
 
 	/**
-	 * @var Resque_Redis Instance of Resque_Redis that talks to redis.
+	 * @var Redis Instance of Redis that talks to redis.
 	 */
-	public static $redis = null;
+	private static $redis = null;
 
 	/**
-	 * @var mixed Host/port conbination separated by a colon, or a nested
+	 * @var string|array Redis host, or a nested
 	 * array of server swith host/port pairs
 	 */
-	protected static $redisServer = null;
+	protected static $redisHost = null;
+
+	/**
+	 * Redis listening port
+	 *
+	 * @var integer
+	 */
+	protected static $redisPort = 6379;
 
 	/**
 	 * @var int ID of Redis database to select.
@@ -34,28 +46,33 @@ class Resque
 	protected static $auth;
 
 	/**
-	 * Given a host/port combination separated by a colon, set it as
-	 * the redis server that Resque will talk to.
+	 * Sets the Redis config for every connection to be created.
 	 *
-	 * @param mixed $server Host/port combination separated by a colon, DSN-formatted URI, or
+	 * @param string|array|callable $host Redis hostname,  Host/port combination separated by a colon, DSN-formatted URI, or
 	 *                      a callable that receives the configured database ID
-	 *                      and returns a Resque_Redis instance, or
+	 *                      and returns a Redis instance, or
 	 *                      a nested array of servers with host/port pairs.
 	 * @param int $database
      * @param string $auth
 	 */
-	public static function setBackend($server, $database = 0, $auth = null)
+	public static function setBackend(
+		string $host,
+		int $port = 6379,
+		$database = 0,
+		$auth = null
+	)
 	{
-		self::$redisServer   = $server;
+		self::$redisHost   = $host;
+		self::$redisPort = $port;
 		self::$redisDatabase = $database;
 		self::$auth          = $auth;
 		self::$redis         = null;
 	}
 
 	/**
-	 * Return an instance of the Resque_Redis class instantiated for Resque.
+	 * Return an instance of the Redis class instantiated for Resque.
 	 *
-	 * @return Resque_Redis Instance of Resque_Redis.
+	 * @return \Dynamo\Resque\RedisClient Instance of Redis.
 	 */
 	public static function redis()
 	{
@@ -63,10 +80,14 @@ class Resque
 			return self::$redis;
 		}
 
-		if (is_callable(self::$redisServer)) {
-			self::$redis = call_user_func(self::$redisServer, self::$redisDatabase);
+		if (is_callable(self::$redisHost)) {
+			self::$redis = call_user_func(self::$redisHost, self::$redisDatabase);
 		} else {
-			self::$redis = new Resque_Redis(self::$redisServer, self::$redisDatabase);
+			self::$redis = new RedisClient(
+				self::$redisHost,
+				self::$redisPort,
+				self::$redisDatabase
+			);
 		}
 
 		if (!empty(self::$auth)) {
@@ -93,7 +114,7 @@ class Resque
 
 		// Close the connection to Redis before forking.
 		// This is a workaround for issues phpredis has.
-		self::$redis = null;
+		//self::$redis = null;
 
 		$pid = pcntl_fork();
 		if($pid === -1) {
@@ -177,32 +198,32 @@ class Resque
 	 *
 	 * @param array         $queues
 	 * @param int           $timeout
-	 * @return null|array   Decoded item from the queue.
+	 * @return null|object   Decoded item from the queue.
 	 */
 	public static function blpop(array $queues, $timeout)
 	{
 	    $list = array();
 	    foreach($queues AS $queue) {
-		$list[] = 'queue:' . $queue;
+			$list[] = 'queue:' . $queue;
 	    }
 
 	    $item = self::redis()->blpop($list, (int)$timeout);
 
 	    if(!$item) {
-		return;
+			return null;
 	    }
 
 	    /**
-	     * Normally the Resque_Redis class returns queue names without the prefix
+	     * Normally the Redis class returns queue names without the prefix
 	     * But the blpop is a bit different. It returns the name as prefix:queue:name
 	     * So we need to strip off the prefix:queue: part
 	     */
 	    $queue = substr($item[0], strlen(self::redis()->getPrefix() . 'queue:'));
 
-	    return array(
-		'queue'   => $queue,
-		'payload' => json_decode($item[1], true)
-	    );
+	    return (object) [
+			'queue'   => $queue,
+			'payload' => json_decode($item[1], true)
+		];
 	}
 
 	/**
@@ -237,15 +258,14 @@ class Resque
 			'queue' => $queue,
 			'id'    => $id,
 		);
-		try {
-			Resque_Event::trigger('beforeEnqueue', $hookParams);
-		}
-		catch(Resque_Job_DontCreate $e) {
-			return false;
-		}
+		//try {
+			Event::trigger('beforeEnqueue', $hookParams);
+		//} catch(Resque_Job_DontCreate $e) {
+		//	return false;
+		//}
 
-		Resque_Job::create($queue, $class, $args, $trackStatus, $id, $prefix);
-		Resque_Event::trigger('afterEnqueue', $hookParams);
+		Job::create($queue, $class, $args, $trackStatus, $id, $prefix);
+		Event::trigger('afterEnqueue', $hookParams);
 
 		return $id;
 	}
@@ -254,11 +274,11 @@ class Resque
 	 * Reserve and return the next available job in the specified queue.
 	 *
 	 * @param string $queue Queue to fetch next available job from.
-	 * @return Resque_Job Instance of Resque_Job to be processed, false if none or error.
+	 * @return Job Instance of Resque_Job to be processed, false if none or error.
 	 */
 	public static function reserve($queue)
 	{
-		return Resque_Job::reserve($queue);
+		return Job::reserve($queue);
 	}
 
 	/**

@@ -215,13 +215,13 @@ calling the `stop()` method on a status class.
 
 ### Obtaining job PID ###
 
-You can obtain the PID of the actual process doing the work through `Resque_Job_PID`. On a forking OS this will be the
+You can obtain the PID of the actual process doing the work through `PID`. On a forking OS this will be the
 PID of the forked process.
 
 CAUTION: on a non-forking OS, the PID returned will be of the worker itself.
 
 ```php
-echo Resque_Job_PID::get($token);
+echo PID::get($token);
 ```
 
 Function returns `0` if the `perform` hasn't started yet, or if it has already ended.
@@ -428,11 +428,11 @@ It's easy to start the resque-scheduler worker using `bin/resque-scheduler`:
 php-resque has a basic event system that can be used by your application to
 customize how some of the php-resque internals behave.
 
-You listen in on events (as listed below) by registering with `Resque_Event` and
+You listen in on events (as listed below) by registering with `Event` and
 supplying a callback that you would like triggered when the event is raised:
 
 ```sh
-Resque_Event::listen('eventName', [callback]);
+Event::listen('eventName', [callback]);
 ```
 
 `[callback]` may be anything in PHP that is callable by `call_user_func_array`:
@@ -445,12 +445,12 @@ Resque_Event::listen('eventName', [callback]);
 Events may pass arguments (documented below), so your callback should accept
 these arguments.
 
-You can stop listening to an event by calling `Resque_Event::stopListening` with
-the same arguments supplied to `Resque_Event::listen`.
+You can stop listening to an event by calling `Event::stopListening` with
+the same arguments supplied to `Event::listen`.
 
 It is up to your application to register event listeners. When enqueuing events
 in your application, it should be as easy as making sure php-resque is loaded
-and calling `Resque_Event::listen`.
+and calling `Event::listen`.
 
 When running workers, if you run workers via the default `bin/resque` script,
 your `APP_INCLUDE` script should initialize and register any listeners required
@@ -464,7 +464,7 @@ A sample plugin is included in the `extras` directory.
 #### beforeFirstFork
 
 Called once, as a worker initializes. Argument passed is the instance of
-`Resque_Worker` that was just initialized.
+`Worker` that was just initialized.
 
 #### beforeFork
 

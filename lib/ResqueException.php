@@ -1,12 +1,16 @@
 <?php
+
+namespace Dynamo\Resque;
+
+use Exception;
+
 /**
- * Redis related exceptions
+ * Resque exception.
  *
  * @package		Resque
  * @author		Chris Boulton <chris@bigcommerce.com>
  * @license		http://www.opensource.org/licenses/mit-license.php
  */
-class Resque_RedisException extends Resque_Exception
+class ResqueException extends Exception
 {
 }
-?>

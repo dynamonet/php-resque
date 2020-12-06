@@ -1,6 +1,6 @@
 <?php
 /**
- * Resque_Event tests.
+ * Event tests.
  *
  * @package		Resque/Tests
  * @author		Chris Boulton <chris@bigcommerce.com>
@@ -20,7 +20,7 @@ class Resque_Tests_RedisTest extends Resque_Tests_TestCase
 			->will($this->throwException(new CredisException('failure')));
 
 		Resque::setBackend(function($database) use ($mockCredis) {
-			return new Resque_Redis('localhost:6379', $database, $mockCredis);
+			return new Redis('localhost:6379', $database, $mockCredis);
 		});
 		Resque::redis()->ping();
 	}
@@ -36,14 +36,14 @@ class Resque_Tests_RedisTest extends Resque_Tests_TestCase
 			// Input , Expected output
 			array('', array(
 				'localhost',
-				Resque_Redis::DEFAULT_PORT,
+				Redis::DEFAULT_PORT,
 				false,
 				false, false,
 				array(),
 			)),
 			array('localhost', array(
 				'localhost',
-				Resque_Redis::DEFAULT_PORT,
+				Redis::DEFAULT_PORT,
 				false,
 				false, false,
 				array(),
@@ -64,14 +64,14 @@ class Resque_Tests_RedisTest extends Resque_Tests_TestCase
 			)),
 			array('redis://foobar', array(
 				'foobar',
-				Resque_Redis::DEFAULT_PORT,
+				Redis::DEFAULT_PORT,
 				false,
 				false, false,
 				array(),
 			)),
 			array('redis://foobar/', array(
 				'foobar',
-				Resque_Redis::DEFAULT_PORT,
+				Redis::DEFAULT_PORT,
 				false,
 				false, false,
 				array(),
@@ -181,7 +181,7 @@ class Resque_Tests_RedisTest extends Resque_Tests_TestCase
 	 */
 	public function testParsingValidDsnString($dsn, $expected)
 	{
-		$result = Resque_Redis::parseDsn($dsn);
+		$result = Redis::parseDsn($dsn);
 		$this->assertEquals($expected, $result);
 	}
 
@@ -192,6 +192,6 @@ class Resque_Tests_RedisTest extends Resque_Tests_TestCase
 	public function testParsingBogusDsnStringThrowsException($dsn)
 	{
 		// The next line should throw an InvalidArgumentException
-		$result = Resque_Redis::parseDsn($dsn);
+		$result = Redis::parseDsn($dsn);
 	}
 }

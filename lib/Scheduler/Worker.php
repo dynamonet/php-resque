@@ -1,5 +1,4 @@
 <?php
-declare(ticks = 1);
 
 /**
  * ResqueScheduler worker to handle scheduling of delayed tasks.
@@ -93,7 +92,7 @@ class ResqueScheduler_Worker
 		while ($item = ResqueScheduler::nextItemForTimestamp($timestamp)) {
 			$this->log('queueing ' . $item['class'] . ' in ' . $item['queue'] .' [delayed]');
 			
-			Resque_Event::trigger('beforeDelayedEnqueue', array(
+			Event::trigger('beforeDelayedEnqueue', array(
 				'queue' => $item['queue'],
 				'class' => $item['class'],
 				'args'  => $item['args'],

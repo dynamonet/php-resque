@@ -1,6 +1,8 @@
 <?php
 
-interface Resque_JobInterface
+namespace Dynamo\Resque;
+
+interface JobInterface
 {
 	/**
 	 * @return bool

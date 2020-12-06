@@ -1,6 +1,6 @@
 <?php
 /**
- * Resque_Job_PID tests.
+ * PID tests.
  *
  * @package		Resque/Tests
  * @author		Chris Boulton <chris@bigcommerce.com>
@@ -9,7 +9,7 @@
 class Resque_Tests_JobPIDTest extends Resque_Tests_TestCase
 {
 	/**
-	 * @var \Resque_Worker
+	 * @var \Worker
 	 */
 	protected $worker;
 
@@ -18,14 +18,14 @@ class Resque_Tests_JobPIDTest extends Resque_Tests_TestCase
 		parent::setUp();
 
 		// Register a worker to test with
-		$this->worker = new Resque_Worker('jobs');
-		$this->worker->setLogger(new Resque_Log());
+		$this->worker = new Worker('jobs');
+		$this->worker->setLogger(new ConsoleLogger());
 	}
 
 	public function testQueuedJobDoesNotReturnPID()
 	{
 		$token = Resque::enqueue('jobs', 'Test_Job', null, true);
-		$this->assertEquals(0, Resque_Job_PID::get($token));
+		$this->assertEquals(0, PID::get($token));
 	}
 
 	public function testRunningJobReturnsPID()
@@ -35,13 +35,13 @@ class Resque_Tests_JobPIDTest extends Resque_Tests_TestCase
 
 		$token = Resque::enqueue('jobs', 'InProgress_Job', null, true);
 		$this->worker->work(0);
-		$this->assertNotEquals(0, Resque_Job_PID::get($token));
+		$this->assertNotEquals(0, PID::get($token));
 	}
 
 	public function testFinishedJobDoesNotReturnPID()
 	{
 		$token = Resque::enqueue('jobs', 'Test_Job', null, true);
 		$this->worker->work(0);
-		$this->assertEquals(0, Resque_Job_PID::get($token));
+		$this->assertEquals(0, PID::get($token));
 	}
 }

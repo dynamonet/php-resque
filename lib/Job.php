@@ -1,4 +1,9 @@
 <?php
+
+namespace Dynamo\Resque;
+
+use Dynamo\Resque\Job\Status;
+
 /**
  * Resque job.
  *
@@ -6,7 +11,7 @@
  * @author		Chris Boulton <chris@bigcommerce.com>
  * @license		http://www.opensource.org/licenses/mit-license.php
  */
-class Resque_Job
+class Job
 {
 	/**
 	 * @var string The name of the queue that this job belongs to.
@@ -14,7 +19,7 @@ class Resque_Job
 	public $queue;
 
 	/**
-	 * @var Resque_Worker Instance of the Resque worker running this job.
+	 * @var Worker Instance of the Resque worker running this job.
 	 */
 	public $worker;
 
@@ -24,12 +29,12 @@ class Resque_Job
 	public $payload;
 
 	/**
-	 * @var object|Resque_JobInterface Instance of the class performing work for this job.
+	 * @var object|JobInterface Instance of the class performing work for this job.
 	 */
 	private $instance;
 
 	/**
-	 * @var Resque_Job_FactoryInterface
+	 * @var FactoryInterface
 	 */
 	private $jobFactory;
 
@@ -69,16 +74,16 @@ class Resque_Job
 				'Supplied $args must be an array.'
 			);
 		}
-		Resque::push($queue, array(
+		Resque::push($queue, [
 			'class'	     => $class,
 			'args'	     => array($args),
 			'id'	     => $id,
 			'prefix'     => $prefix,
 			'queue_time' => microtime(true),
-		));
+		]);
 
 		if($monitor) {
-			Resque_Job_Status::create($id, $prefix);
+			Status::create($id, $prefix);
 		}
 
 		return $id;
@@ -98,7 +103,7 @@ class Resque_Job
 			return false;
 		}
 
-		return new Resque_Job($queue, $payload);
+		return new Job($queue, $payload);
 	}
 
 	/**
@@ -166,8 +171,8 @@ class Resque_Job
 
 	/**
 	 * Get the instantiated object for this job that will be performing work.
-	 * @return Resque_JobInterface Instance of the object that this job belongs to.
-	 * @throws Resque_Exception
+	 * @return JobInterface Instance of the object that this job belongs to.
+	 * @throws ResqueException
 	 */
 	public function getInstance()
 	{
@@ -185,13 +190,13 @@ class Resque_Job
 	 * associated with the job with the supplied arguments.
 	 *
 	 * @return bool
-	 * @throws Resque_Exception When the job's class could not be found or it does not contain a perform method.
+	 * @throws ResqueException When the job's class could not be found or it does not contain a perform method.
 	 */
 	public function perform()
 	{
 		$result = true;
 		try {
-			Resque_Event::trigger('beforePerform', $this);
+			Event::trigger('beforePerform', $this);
 
 			$instance = $this->getInstance();
 			if(is_callable([$instance, 'setUp'])) {
@@ -204,7 +209,7 @@ class Resque_Job
 				$instance->tearDown();
 			}
 
-			Resque_Event::trigger('afterPerform', $this);
+			Event::trigger('afterPerform', $this);
 		}
 		// beforePerform/setUp have said don't perform this job. Return.
 		catch(Resque_Job_DontPerform $e) {
@@ -221,7 +226,7 @@ class Resque_Job
 	 */
 	public function fail($exception)
 	{
-		Resque_Event::trigger('onFailure', array(
+		Event::trigger('onFailure', array(
 			'exception' => $exception,
 			'job' => $this,
 		));
@@ -254,13 +259,24 @@ class Resque_Job
 	{
 		$monitor = false;
 		if (!empty($this->payload['id'])) {
-			$status = new Resque_Job_Status($this->payload['id'], $this->getPrefix());
+			$status = new Status(
+				$this->payload['id'],
+				$this->getPrefix()
+			);
+
 			if($status->isTracking()) {
 				$monitor = true;
 			}
 		}
 
-		return self::create($this->queue, $this->payload['class'], $this->getArguments(), $monitor, null, $this->getPrefix());
+		return self::create(
+			$this->queue,
+			$this->payload['class'],
+			$this->getArguments(),
+			$monitor,
+			null,
+			$this->getPrefix()
+		);
 	}
 
 	/**
@@ -284,10 +300,10 @@ class Resque_Job
 	}
 
 	/**
-	 * @param Resque_Job_FactoryInterface $jobFactory
+	 * @param FactoryInterface $jobFactory
 	 * @return Resque_Job
 	 */
-	public function setJobFactory(Resque_Job_FactoryInterface $jobFactory)
+	public function setJobFactory(FactoryInterface $jobFactory)
 	{
 		$this->jobFactory = $jobFactory;
 
@@ -295,12 +311,12 @@ class Resque_Job
 	}
 
 	/**
-	 * @return Resque_Job_FactoryInterface
+	 * @return FactoryInterface
 	 */
 	public function getJobFactory()
 	{
 		if ($this->jobFactory === null) {
-			$this->jobFactory = new Resque_Job_Factory();
+			$this->jobFactory = new Factory();
 		}
 		return $this->jobFactory;
 	}
