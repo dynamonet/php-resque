@@ -1,0 +1,16 @@
+{
+    "name": "dynamonet/resque",
+    "description": "Distributed PHP workers with Job management, inspired on Chris Boulton's work, with steroids",
+    "type": "library",
+    "require": {
+        "dynamonet/redis": "dev-master"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Edu",
+            "email": "eduardo@dynamonet.com.ar"
+        }
+    ],
+    "minimum-stability": "dev"
+}
