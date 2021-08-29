@@ -1,0 +1,21 @@
+#!/usr/bin/env php
+<?php
+// application.php
+
+require __DIR__.'/vendor/autoload.php';
+
+use Dynamo\Resque\Commands\HelloCommand;
+use Dynamo\Resque\Commands\PushJobCommand;
+use Dynamo\Resque\Commands\RunJobCommand;
+use Dynamo\Resque\Jobs\DefaultJobFactory;
+use Symfony\Component\Console\Application;
+
+$application = new Application();
+
+// ... register commands
+$application->add(new HelloCommand());
+$application->add(new RunJobCommand(new DefaultJobFactory([])));
+$application->add(new PushJobCommand());
+
+
+$application->run();

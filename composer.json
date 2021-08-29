@@ -2,9 +2,6 @@
     "name": "dynamonet/resque",
     "description": "Distributed PHP workers with Job management, inspired on Chris Boulton's work, with steroids",
     "type": "library",
-    "require": {
-        "dynamonet/redis": "dev-master"
-    },
     "license": "MIT",
     "authors": [
         {
@@ -12,5 +9,18 @@
             "email": "eduardo@dynamonet.com.ar"
         }
     ],
-    "minimum-stability": "dev"
+    "minimum-stability": "dev",
+    "require": {
+        "dynamonet/redis": "^1.1",
+        "psr/log": "^1.1",
+        "symfony/console": "5.4.x-dev"
+    },
+    "require-dev": {
+        "katzgrau/klogger": "^1.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "Dynamo\\Resque\\" : "src/"
+        }
+    }
 }
