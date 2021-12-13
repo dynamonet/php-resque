@@ -2,16 +2,25 @@
 
 namespace Dynamo\Resque\Jobs;
 
+use Psr\Container\ContainerInterface;
+use Psr\Log\LoggerInterface;
+
 abstract class Job
 {
     const QUEUED = 1;
     const RUNNING = 2;
     const SUCCESS = 3;
     
+    public $id;
     protected $queue;
     protected $pid;
     protected $start;
     protected $args;
+
+    /**
+     * @var \Psr\Log\LoggerInterface
+     */
+    protected $logger;
     
     public function __construct(
         string $queue = null,
@@ -22,6 +31,16 @@ abstract class Job
         if($args){
             $this->parseArgs($args);
         }
+    }
+
+    public function setup(ContainerInterface $container)
+    {
+        $this->logger = $container->get(LoggerInterface::class);
+    }
+
+    public function setLogger(LoggerInterface $logger)
+    {
+        $this->logger = $logger;
     }
 
     abstract public function perform();

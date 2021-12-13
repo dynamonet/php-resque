@@ -3,11 +3,14 @@
 namespace Dynamo\Resque\Commands;
 
 use Dynamo\Resque\Jobs\JobFactoryInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Process\Exception\ProcessFailedException;
+use Symfony\Component\Process\Process;
 
 class RunJobCommand extends Command
 {
@@ -15,10 +18,15 @@ class RunJobCommand extends Command
     protected static $defaultName = 'job:run';
 
     private $jobFactory;
+    private $logger;
 
-    public function __construct(JobFactoryInterface $jobFactory)
+    public function __construct(
+        JobFactoryInterface $jobFactory,
+        LoggerInterface $logger
+    )
     {
         $this->jobFactory = $jobFactory;
+        $this->logger = $logger;
 
         parent::__construct();
     }
@@ -34,17 +42,31 @@ class RunJobCommand extends Command
         // the "--help" option
         ->addArgument('job_type', InputArgument::REQUIRED)
         ->addArgument('args', InputArgument::OPTIONAL, 'Job arguments')
-        ->addOption('background', 'b', InputOption::VALUE_OPTIONAL, 'Run job in background', false);
+        ->addOption('background', 'b', InputOption::VALUE_NONE, 'Run job in background');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $job = $this->jobFactory->fromType(
-            $input->getArgument('job_type'),
-            $input->getArgument('args')
-        );
+        if($input->getOption('background')){
+            // run in background
+            $cmd = implode(' ', ['php', 'resque', 'job:run',
+                $input->getArgument('job_type'),
+                $input->getArgument('args')
+            ]);
+            echo $cmd . PHP_EOL;
+            exec("{$cmd} > /dev/null 2>&1 &");
 
-        $job->perform();
+            //$process->setOptions(['create_new_console' => true]);
+            //$process->start();
+            //$process->wait();
+        } else {
+            $job = $this->jobFactory->fromType(
+                $input->getArgument('job_type'),
+                $input->getArgument('args')
+            );
+            $job->setLogger($this->logger);
+            $job->perform();
+        }
 
         // ... put here the code to create the user
         // this method must return an integer number with the "exit status code"

@@ -4,18 +4,44 @@
 
 require __DIR__.'/vendor/autoload.php';
 
+use Dynamo\Redis\Client as Redis;
+use Dynamo\Resque\Manager;
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
+use Dynamo\Resque\Logging\RedisPubSubHandler;
 use Dynamo\Resque\Commands\HelloCommand;
 use Dynamo\Resque\Commands\PushJobCommand;
 use Dynamo\Resque\Commands\RunJobCommand;
+use Dynamo\Resque\Commands\TraceLogsCommand;
 use Dynamo\Resque\Jobs\DefaultJobFactory;
 use Symfony\Component\Console\Application;
+
+
+$redis = new Redis([
+    'host' => getenv('REDIS_HOST') ?: 'localhost',
+    'port' => getenv('REDIS_PORT') ?: 6379,
+]);
+
+$manager = new Manager(
+    $redis,
+    explode(',', getenv('RESQUE_QUEUES') ?: 'resque-hp,resque-lp')
+);
+
+$logger = new Logger('resque');
+$pubsubKey = getenv('RESQUE_PUBSUB_KEY') ?: 'resque:logging-pubsub';
+$logger->pushHandler(new StreamHandler('php://stdout'));
+$logger->pushHandler(new RedisPubSubHandler($redis, $pubsubKey));
 
 $application = new Application();
 
 // ... register commands
 $application->add(new HelloCommand());
-$application->add(new RunJobCommand(new DefaultJobFactory([])));
-$application->add(new PushJobCommand());
+$application->add(new RunJobCommand(
+    new DefaultJobFactory([]),
+    $logger
+));
+$application->add(new PushJobCommand($manager));
+$application->add(new TraceLogsCommand($redis, $pubsubKey));
 
 
 $application->run();

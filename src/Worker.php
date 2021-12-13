@@ -22,6 +22,11 @@ class Worker extends Process
     protected $queues = [];
 
     /**
+     * @var \Dynamo\Resque\Manager
+     */
+    protected $manager;
+
+    /**
      * Redis client
      *
      * @var \Dynamo\Redis\Client
@@ -56,13 +61,13 @@ class Worker extends Process
     protected $running_jobs = [];
 
     public function __construct(
-        Redis $redis,
+        Manager $manager,
         JobFactoryInterface $jobFactory,
         array $queues,
         ?LoggerInterface $logger = null
     )
     {
-        $this->redis = $redis;
+        $this->redis = $manager->getRedis();
         $this->jobFactory = $jobFactory;
         $this->queues = $queues;
         parent::__construct($logger);
@@ -98,6 +103,11 @@ class Worker extends Process
         );
     }
 
+    protected function updateJob(Job $job)
+    {
+
+    }
+
     protected function init()
     {
         $this->name = $this->reserveName();
@@ -109,6 +119,7 @@ class Worker extends Process
         while(!$this->shutdown){
             $job = $this->pop();
             if($job){
+                $this->redis->updateJob();
                 if($this->logger){
                     $this->logger->debug("Job poped from '{$job->getQueue()}'! Type: ".get_class($job));
                 }

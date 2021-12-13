@@ -10,9 +10,8 @@ class SleepJob extends Job {
     public function perform()
     {
         $n = (int) $this->args;
-        echo "Counting to {$n}\n";
         for($i = 1; $i <= $n; $i++){
-            echo "{$i}/{$n}\n";
+            $this->logger->info("{$i} out of {$n}");
             sleep(1);
         }
         
