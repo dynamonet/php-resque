@@ -13,12 +13,10 @@
     "require": {
         "dynamonet/redis": "^1.1",
         "psr/log": "^1.1",
-        "symfony/console": "5.4.x-dev",
-        "symfony/process": "5.4.x-dev",
-        "monolog/monolog": "2.x-dev",
+        "symfony/console": "^5.4",
+        "symfony/process": "^5.4",
+        "monolog/monolog": "^2.3",
         "psr/container": "^2.0"
-    },
-    "require-dev": {
     },
     "autoload": {
         "psr-4": {
