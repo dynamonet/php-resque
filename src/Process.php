@@ -45,20 +45,20 @@ abstract class Process
 	 */
     public function start()
     {
-
-			try{
-				
-				$this->init();
-				$this->run();
-			} catch(Throwable $err) {
+		try{
+			$this->init();
+			$this->run();
+		} catch(Throwable $err) {
+			if($this->logger){
 				$this->logger->error(
-                    sprintf(
-                        "EXCEPTION IN PROCESS '%s': %s",
-                        get_class($this),
-                        $err->getMessage()
-                    )
-                );
+					sprintf(
+						"EXCEPTION IN PROCESS '%s': %s",
+						get_class($this),
+						$err->getMessage()
+					)
+				);
 			}
+		}
 	}
 
 	protected function fork()

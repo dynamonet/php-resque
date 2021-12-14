@@ -6,6 +6,7 @@ use Dynamo\Redis\Client as Redis;
 use Dynamo\Resque\Jobs\Job;
 use Dynamo\Resque\Jobs\JobFactoryInterface;
 use Psr\Log\LoggerInterface;
+use Throwable;
 
 class Worker extends Process
 {
@@ -43,7 +44,7 @@ class Worker extends Process
      *
      * @var boolean
      */
-    protected $fork = true;
+    protected $fork = false;
 
     /**
      * If $fork == true, indicates the max number of forked processes (running jobs)
@@ -62,14 +63,11 @@ class Worker extends Process
 
     public function __construct(
         Manager $manager,
-        JobFactoryInterface $jobFactory,
-        array $queues,
         ?LoggerInterface $logger = null
     )
     {
+        $this->manager = $manager;
         $this->redis = $manager->getRedis();
-        $this->jobFactory = $jobFactory;
-        $this->queues = $queues;
         parent::__construct($logger);
     }
 
@@ -103,6 +101,11 @@ class Worker extends Process
         );
     }
 
+    protected function unregisterWorker()
+    {
+        //TODO
+    }
+
     protected function updateJob(Job $job)
     {
 
@@ -110,6 +113,7 @@ class Worker extends Process
 
     protected function init()
     {
+        parent::init();
         $this->name = $this->reserveName();
         $this->registerWorker();
     }
@@ -117,9 +121,12 @@ class Worker extends Process
     protected function run()
     {
         while(!$this->shutdown){
-            $job = $this->pop();
+            $this->logger->debug("Waiting for a job. Timeout: {$this->blpop_timeout}s");
+            $job = $this->manager->pop($this->blpop_timeout);
             if($job){
-                $this->redis->updateJob();
+                $this->manager->updateJob($job, [
+                    'worker' => $this->name,
+                ]);
                 if($this->logger){
                     $this->logger->debug("Job poped from '{$job->getQueue()}'! Type: ".get_class($job));
                 }
@@ -131,9 +138,10 @@ class Worker extends Process
                         $this->updateState();
                     } else if($pid === 0){
                         //forked process context
+                        $this->processJob($job);
                     }
                 } else {
-                    $job->perform();
+                    $this->processJob($job);
                 }
                 
 
@@ -141,9 +149,24 @@ class Worker extends Process
 
             }
         }
+
+        $this->logger->info("Worker '{$this->name}' shutting down");
+
+        $this->unregisterWorker();
     }
 
-    protected function pop() : ?Job
+    protected function processJob(Job $job)
+    {
+        try {
+            $job->setLogger($this->logger);
+            $job->perform();
+        } catch(Throwable $error) {
+            $this->logger->error(sprintf("Failed to process '%s' job: %s", get_class($job), $error->getMessage()));
+
+        }
+    }
+
+    /*protected function pop() : ?Job
     {
         $queues = array_merge(
             [ "{$this->redis_keys_prefix}:{$this->name}:queue" ],
@@ -176,7 +199,7 @@ class Worker extends Process
             $payload['type'],
             $payload['args'] ?? null
         );
-    }
+    }*/
 
     protected function updateState()
     {

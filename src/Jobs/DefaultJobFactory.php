@@ -6,7 +6,6 @@ use Exception;
 
 class DefaultJobFactory implements JobFactoryInterface
 {
-
     /**
      * Namespaces to use when trying to instantiate a job
      *
@@ -15,19 +14,26 @@ class DefaultJobFactory implements JobFactoryInterface
     protected $namespaces;
 
     /**
-     * Undocumented function
-     *
-     * @param array $namespaces Array of directories to lookup for Job classes
+     * @param string|array $namespace Default namespace of your job classes,
+     *    or an array of namespaces to look for the Job class
      */
-    public function __construct(array $namespaces)
+    public function __construct($namespace)
     {
-        $this->namespaces = array_merge(
-            $namespaces,
-            [ "\\Dynamo\\Resque\\Jobs\\" ]
+        $this->namespaces = (
+            is_array($namespace) ?
+            array_merge($namespace, [ "\\Dynamo\\Resque\\Jobs\\" ]) :
+            [ $namespace, "\\Dynamo\\Resque\\Jobs\\" ]
         );
     }
 
-    public function parse(string $queue, $payload) : Job
+    public function create(string $type, $args = null, $id = null) : Job
+    {
+        $class = $this->getJobClass($type);
+
+        return new $class($args, $id);
+    }
+
+    public function decode(string $payload, string $queue) : Job
     {
         $json = json_decode($payload, true);
 
@@ -37,39 +43,29 @@ class DefaultJobFactory implements JobFactoryInterface
 
         $job_type = $json['type'];
         $args = $json['args'] ?? null;
+        $job_id = $json['id'] ?? null;
 
         if(strpos($job_type, ' ') !== false){
             throw new Exception("job type cannot contain spaces");
         }
 
-        $lookup_places = [];
+        $class = $this->getJobClass($job_type);
 
-        foreach($this->lookup_dir as $dir){
-            $path = implode(DIRECTORY_SEPARATOR, [
-                rtrim($dir, DIRECTORY_SEPARATOR),
-                trim($job_type)
-            ]);
-            $lookup_places[] = $path;
-            $class = str_replace('/','\\',$path);
-            if(class_exists($class)){
-                return new $class($args);
-            }
-        }
-
-        throw new Exception("Failed to find a job class for job type: '{$job_type}'. Tried: ".implode(', ', $lookup_places));
+        return new $class($args, $job_id, $queue);
     }
 
-    public function fromType(string $type, $args = null) : Job
+    public function encode(Job $job): string
     {
-        $class = $this->getNamespacedJob($type);
+        $classMeta = new \ReflectionClass($job);
+        return json_encode([
+            'type' => $classMeta->getShortName(),
+            'id' => $job->id,
+            'args' => $job->getArgs(),
+        ]);
         
-        $job = new $class();
-        $job->parseArgs($args);
-
-        return $job;
     }
 
-    protected function getNamespacedJob(string $type) : string
+    protected function getJobClass(string $type) : string
     {
         $tried = [];
         foreach($this->namespaces as $ns){
@@ -81,7 +77,7 @@ class DefaultJobFactory implements JobFactoryInterface
             }
 
             // 2. try CamelCased version of provided type
-            $guess = $ns . str_replace(' ', '', ucwords(preg_replace('/[\s_-]+/',' ', $type)));
+            $guess = $ns . str_replace(' ', '', ucwords(preg_replace('/[\s_-]+/',' ', strtolower($type))));
             $tried[] = $guess;
             if(class_exists($guess)){
                 return $guess;

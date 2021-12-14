@@ -60,7 +60,7 @@ class RunJobCommand extends Command
             //$process->start();
             //$process->wait();
         } else {
-            $job = $this->jobFactory->fromType(
+            $job = $this->jobFactory->create(
                 $input->getArgument('job_type'),
                 $input->getArgument('args')
             );

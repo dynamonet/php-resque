@@ -24,5 +24,6 @@
         "psr-4": {
             "Dynamo\\Resque\\" : "src/"
         }
-    }
+    },
+    "bin": [ "resque" ]
 }

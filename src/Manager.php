@@ -137,21 +137,16 @@ class Manager
 
     public function pop(int $timeout) : ?Job
     {
+        if(!$this->factory){
+            throw new Exception("Please pass a JobFactory object to the Manager constructor, so you can pop and parse jobs");
+        }
+
         $blpop_args = array_merge($this->queues, [ $timeout ]);
         $result = $this->redis->blPop(...$blpop_args);
         if(is_array($result) && count($result) >= 2){
             $queue = $result[0];
-            $payload = json_decode($result[1]);
-            if($payload){
-                $job_def = new JobWrapper(
-                    $payload->type,
-                    $queue,
-                    $payload->id,
-                    $payload->args
-                );
-
-                $this->
-            }
+            $payload = $result[1];
+            return $this->factory->decode($payload, $queue);
         }
 
         return null;
@@ -159,6 +154,6 @@ class Manager
 
     public function updateJob(Job $job, array $fields)
     {
-        $this->redis->hMSet($job->)
+        $this->redis->hMSet("{$this->key_prefix}:job:{$job->id}", $fields);
     }
 }

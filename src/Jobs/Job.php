@@ -23,14 +23,25 @@ abstract class Job
     protected $logger;
     
     public function __construct(
-        string $queue = null,
-        $args = null
+        $args = null,
+        string $id = null,
+        string $queue = null
     )
     {
         $this->queue = $queue;
         if($args){
             $this->parseArgs($args);
         }
+    }
+
+    public function getArgs()
+    {
+        return $this->args;
+    }
+
+    public function getQueue()
+    {
+        return $this->queue;
     }
 
     public function setup(ContainerInterface $container)
