@@ -83,6 +83,19 @@ class Worker extends Process
         parent::__construct($logger);
     }
 
+    /**
+     * Sets the forking behaviour. If TRUE, forking will be enabled, and the worker will fork
+     * itself to run every poped job. FALSE: the worker won't fork, and will process the jobs
+     * synchrounously (the worker won't be able to do anything until the job finishes)
+     *
+     * @param boolean $enabled
+     * @return void
+     */
+    public function setFork(bool $enabled)
+    {
+        $this->fork = $enabled;
+    }
+
     protected function getWorkerNames() : array
     {
         return [
@@ -151,6 +164,7 @@ class Worker extends Process
                     } else if($pid === 0){
                         //forked process context
                         $this->processJob($job);
+                        exit;
                     }
                 } else {
                     $this->processJob($job);
