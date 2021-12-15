@@ -73,7 +73,7 @@ class Worker extends Process
     public function __construct(
         Manager $manager,
         ?LoggerInterface $logger = null,
-        ?ContainerInterface $container
+        ?ContainerInterface $container = null
     )
     {
         $this->manager = $manager;
