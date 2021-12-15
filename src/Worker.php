@@ -4,7 +4,7 @@ namespace Dynamo\Resque;
 
 use Dynamo\Redis\Client as Redis;
 use Dynamo\Resque\Jobs\Job;
-use Dynamo\Resque\Jobs\JobFactoryInterface;
+use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -28,16 +28,18 @@ class Worker extends Process
     protected $manager;
 
     /**
+     * This container is passed to every job through the "setup" method, before the job starts.
+     *
+     * @var \Psr\Container\ContainerInterface
+     */
+    protected $container;
+
+    /**
      * Redis client
      *
      * @var \Dynamo\Redis\Client
      */
     protected $redis;
-
-    /**
-     * @var \Dynamo\Resque\Jobs\JobFactoryInterface
-     */
-    protected $jobFactory;
     
     /**
      * Whether to fork when a new job is poped, or not
@@ -61,13 +63,23 @@ class Worker extends Process
 
     protected $running_jobs = [];
 
+    /**
+     * Undocumented function
+     *
+     * @param Manager $manager
+     * @param Logger|null $logger
+     * @param ContainerInterface|null $container
+     */
     public function __construct(
         Manager $manager,
-        ?LoggerInterface $logger = null
+        ?LoggerInterface $logger = null,
+        ?ContainerInterface $container
     )
     {
         $this->manager = $manager;
+        $this->container = $container;
         $this->redis = $manager->getRedis();
+
         parent::__construct($logger);
     }
 
@@ -158,6 +170,7 @@ class Worker extends Process
     protected function processJob(Job $job)
     {
         try {
+            $job->setup($this->container);
             $job->setLogger($this->logger);
             $job->perform();
         } catch(Throwable $error) {
