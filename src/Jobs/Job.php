@@ -21,6 +21,8 @@ abstract class Job
      * @var \Psr\Log\LoggerInterface
      */
     protected $logger;
+
+    protected $container;
     
     public function __construct(
         $args = null,
@@ -46,7 +48,7 @@ abstract class Job
 
     public function setup(ContainerInterface $container)
     {
-        $this->logger = $container->get(LoggerInterface::class);
+        //$this->logger = $container->get(LoggerInterface::class);
     }
 
     public function setLogger(LoggerInterface $logger)

@@ -38,7 +38,7 @@ class DefaultJobFactory implements JobFactoryInterface
         $json = json_decode($payload, true);
 
         if(!$json || !isset($json['type'])){
-            throw new Exception("Invalid JSON");
+            throw new Exception("Invalid job wrapper. Payload MUST be a JSON object with 'type', and optionally 'args' and 'id'");
         }
 
         $job_type = $json['type'];

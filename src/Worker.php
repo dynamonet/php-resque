@@ -147,8 +147,21 @@ class Worker extends Process
     {
         while(!$this->shutdown){
             $this->logger->debug("Waiting for a job. Timeout: {$this->blpop_timeout}s");
-            $job = $this->manager->pop($this->blpop_timeout);
+            $job = null;
+            try {
+                $job = $this->manager->pop($this->blpop_timeout);
+            } catch (Throwable $err){
+                $this->logger->error("Failed to pop job: {$err->getMessage()}");
+                continue;
+            }
             if($job){
+                $this->logger->info(
+                    sprintf(
+                        "Popped a '%s' job. Arguments: %s",
+                        get_class($job),
+                        json_encode($job->getArgs())
+                    )
+                );
                 $this->manager->updateJob($job, [
                     'worker' => $this->name,
                 ]);
