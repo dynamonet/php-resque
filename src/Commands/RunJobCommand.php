@@ -3,6 +3,7 @@
 namespace Dynamo\Resque\Commands;
 
 use Dynamo\Resque\Jobs\JobFactoryInterface;
+use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -19,14 +20,17 @@ class RunJobCommand extends Command
 
     private $jobFactory;
     private $logger;
+    private $container;
 
     public function __construct(
         JobFactoryInterface $jobFactory,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        ?ContainerInterface $container = null
     )
     {
         $this->jobFactory = $jobFactory;
         $this->logger = $logger;
+        $this->container = $container;
 
         parent::__construct();
     }
@@ -64,6 +68,7 @@ class RunJobCommand extends Command
                 $input->getArgument('job_type'),
                 $input->getArgument('args')
             );
+            $job->setup($this->container);
             $job->setLogger($this->logger);
             $job->perform();
         }
