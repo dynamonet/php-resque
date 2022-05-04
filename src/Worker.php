@@ -200,9 +200,16 @@ class Worker extends Process
             $job->setup($this->container);
             $job->setLogger($this->logger);
             $job->perform();
+            $this->manager->updateJob($job, [
+                'status' => 'finished',
+                'lastUpdate' => date('Y-m-d H:i:s'),
+            ]);
         } catch(Throwable $error) {
             $this->logger->error(sprintf("Failed to process '%s' job: %s", get_class($job), $error->getMessage()));
-
+            $this->manager->updateJob($job, [
+                'status' => 'failed',
+                'lastUpdate' => date('Y-m-d H:i:s'),
+            ]);
         }
     }
 

@@ -49,7 +49,8 @@ class Manager
             // default settings
             [
                 'jobIdCounterKey' => 'next-id',
-                'jobsInProgressKey' => 'jobs-in-progress'
+                'jobsInProgressKey' => 'jobs-in-progress',
+                'jobStatusTtl' => 3600,
             ],
             $settings
         );
@@ -154,6 +155,12 @@ class Manager
 
     public function updateJob(Job $job, array $fields)
     {
-        $this->redis->hMSet("{$this->key_prefix}:job:{$job->id}", $fields);
+        $batch = $this->redis->pipeline();
+        $key = "{$this->key_prefix}:job:{$job->id}";
+        $batch->hMSet($key, $fields);
+        if($this->settings->jobStatusTtl > 0){
+            $batch->expire($key, $this->settings->jobStatusTtl);
+        }
+        $batch->exec();
     }
 }
